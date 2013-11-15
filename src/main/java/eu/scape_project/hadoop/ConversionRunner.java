@@ -17,12 +17,12 @@ public class ConversionRunner {
 
         JobConf conf = new JobConf(ConversionRunner.class);
         conf.setJobName("tif2jp2");
-        if(args.length > 2) {
-            conf.set("tmpdir", args[2]);
+        if(args.length > 3) {
+            conf.set("tmpdir", args[3]);
         }
 
-        conf.set("logdir", args[1]);
-        conf.set("outdir", args[1]);
+        conf.set("logdir", args[2]);
+        conf.set("outdir", args[2]);
         conf.setInt("mapred.line.input.format.linespermap", 1);
 
         conf.setMapOutputKeyClass(Text.class);
@@ -35,37 +35,10 @@ public class ConversionRunner {
         conf.setInputFormat(NLineInputFormat.class);
         conf.setOutputFormat(TextOutputFormat.class);
 
-
-        FileInputFormat.setInputPaths(conf, new Path(args[0]));
-        FileOutputFormat.setOutputPath(conf, new Path(args[1]));
+        FileInputFormat.setInputPaths(conf, new Path(args[1]));
+        FileOutputFormat.setOutputPath(conf, new Path(args[2]));
 
         JobClient.runJob(conf);
-
-
-
-/*        Configuration conf = new Configuration();
-        FileSystem fs = FileSystem.get(conf);
-        Path inFile = new Path(args[0]);
-
-        FSDataInputStream zipfile = fs.open(inFile);
-        ZipInputStream zis = new ZipInputStream(zipfile);
-
-        ZipEntry ze = zis.getNextEntry();
-
-        while(ze!=null){
-            String fileName = ze.getName();
-            FSDataOutputStream out = fs.create(new Path(fileName + "-char.txt"));
-            System.out.println("characterizing: " + fileName);
-            Executor exec = new DefaultExecutor();
-            CommandLine cl = new CommandLine("file");
-            cl.addArgument("-");
-            exec.setStreamHandler(new PumpStreamHandler(out, null, zis));
-            exec.execute(cl);
-            ze = zis.getNextEntry();
-            out.close();
-        }
-        zis.close();       */
-
 
     }
 }
