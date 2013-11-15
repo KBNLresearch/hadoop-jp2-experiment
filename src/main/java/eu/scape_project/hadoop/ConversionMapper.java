@@ -14,17 +14,18 @@ import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
-import eu.scape_project.hadoop.util.Settings;
 import java.io.IOException;
 
 
 public class ConversionMapper extends MapReduceBase implements Mapper<LongWritable, Text, Text, Text> {
     private static final String sep = System.getProperty("line.separator");
+    private String tempdir;
+    private String outdir;
+
     @Override
     public void configure(JobConf job) {
-        Settings.tempdir = job.get("tmpdir");
-        Settings.logdir = job.get("logdir");
-        Settings.outdir = job.get("outdir");
+        tempdir = job.get("tmpdir");
+        outdir = job.get("outdir");
     }
 
 
@@ -34,7 +35,7 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
 
 
         FileSystem fs = FileSystem.get(new Configuration());
-        LocalFile tif = new LocalFile(Settings.tempdir + "/" + filepath.toString().replaceAll(".+\\/", ""), filepath.toString(), fs);
+        LocalFile tif = new LocalFile(tempdir + "/" + filepath.toString().replaceAll(".+\\/", ""), filepath.toString(), fs);
         LocalFile jp2 = new LocalFile(tif.getPath() + ".jp2");
         LocalFile tga = new LocalFile(tif.getPath() + ".tga");
         StringBuffer report = new StringBuffer(sep);
@@ -50,7 +51,7 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
             toolLogs.append("opj_compress OUT:" + sep + "---" + sep + opj_compress.getStdOut() + sep + sep);
             toolLogs.append("opj_compress ERR:" + sep + "---" + sep + opj_compress.getStdErr() + sep + sep);
 
-            fs.copyFromLocalFile(new Path(jp2.getPath()), new Path(Settings.outdir + "/" + jp2.getName()));
+            fs.copyFromLocalFile(new Path(jp2.getPath()), new Path(outdir + "/" + jp2.getName()));
 
             CliCommand jpylyzer = new CliCommand(jp2);
             jpylyzer.runCommand("jpylyzer", "#infile#");
