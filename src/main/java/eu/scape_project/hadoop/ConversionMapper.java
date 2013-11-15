@@ -82,8 +82,8 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
             } else {
                 report.append("FAILURE;");
             }
-            toolLogs.append("gm compare OUT:" + sep + "---" + sep + opj_decompress.getStdOut() + sep + sep);
-            toolLogs.append("gm compare ERR:" + sep + "---" + sep + opj_decompress.getStdErr() + sep + sep);
+            toolLogs.append("gm compare OUT:" + sep + "---" + sep + gm.getStdOut() + sep + sep);
+            toolLogs.append("gm compare ERR:" + sep + "---" + sep + gm.getStdErr() + sep + sep);
 
         } catch(IOException e) {
             report.append("IOEXCEPTION: " + e.getMessage());
