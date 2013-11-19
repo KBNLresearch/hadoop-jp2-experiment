@@ -15,6 +15,7 @@ public class ConversionRunner {
 
     public static void main(String[] args) throws IOException {
 
+
         JobConf conf = new JobConf(ConversionRunner.class);
         conf.setJobName("tif2jp2");
         if(args.length > 3) {

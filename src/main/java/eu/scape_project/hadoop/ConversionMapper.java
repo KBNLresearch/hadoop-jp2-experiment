@@ -34,8 +34,8 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
 
         FileSystem fs = FileSystem.get(new Configuration());
         LocalFile tif = new LocalFile(tempdir + "/" + filepath.toString().replaceAll(".+\\/", ""), filepath.toString(), fs);
-        LocalFile jp2 = new LocalFile(tif.getPath() + ".jp2");
-        LocalFile outtif = new LocalFile(tif.getPath() + ".tif");
+        LocalFile jp2 = new LocalFile(tif.getAbsolutePath() + ".jp2");
+        LocalFile outtif = new LocalFile(tif.getAbsolutePath() + "out.tif");
         StringBuffer report = new StringBuffer(sep);
         StringBuffer toolLogs = new StringBuffer(sep + sep + "TOOL LOGS FOR " + filepath + ":" + sep + "==================" + sep);
 
@@ -49,7 +49,7 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
             toolLogs.append("opj_compress OUT:" + sep + "---" + sep + opj_compress.getStdOut() + sep + sep);
             toolLogs.append("opj_compress ERR:" + sep + "---" + sep + opj_compress.getStdErr() + sep + sep);
 
-            fs.copyFromLocalFile(new Path(jp2.getPath()), new Path(outdir + "/" + jp2.getName()));
+            fs.copyFromLocalFile(new Path(jp2.getAbsolutePath()), new Path(outdir + "/" + jp2.getName()));
 
             CliCommand jpylyzer = new CliCommand(jp2);
             jpylyzer.runCommand("jpylyzer", "#infile#");

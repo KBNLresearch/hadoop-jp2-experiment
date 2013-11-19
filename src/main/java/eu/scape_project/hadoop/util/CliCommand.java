@@ -5,7 +5,6 @@ import org.apache.commons.exec.DefaultExecutor;
 import org.apache.commons.exec.Executor;
 import org.apache.commons.exec.LogOutputStream;
 import org.apache.commons.exec.PumpStreamHandler;
-import org.apache.hadoop.fs.FSDataOutputStream;
 
 import java.io.IOException;
 
@@ -35,8 +34,8 @@ public class CliCommand {
         Executor exec = new DefaultExecutor();
         CommandLine cl = new CommandLine(command);
         for(String arg : args) {
-            if(arg.matches("^#infile#.*$")) { arg = arg.replaceAll("#infile#", infile.getPath()); }
-            else if(arg.matches("^#outfile#.*$")) { arg = arg.replaceAll("#outfile#", outfile.getPath()); }
+            if(arg.matches("^#infile#.*$")) { arg = arg.replaceAll("#infile#", infile.getAbsolutePath()); }
+            else if(arg.matches("^#outfile#.*$")) { arg = arg.replaceAll("#outfile#", outfile.getAbsolutePath()); }
             cl.addArgument(arg);
         }
         exec.setStreamHandler(new PumpStreamHandler(new StdStrHandler(stdout), new StdStrHandler(stderr)));

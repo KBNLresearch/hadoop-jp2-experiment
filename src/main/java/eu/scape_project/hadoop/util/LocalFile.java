@@ -21,7 +21,7 @@ public class LocalFile {
         fileSystem.copyToLocalFile(new Path(inpath), new Path(file.getAbsolutePath()));
     }
 
-    public String getPath() {
+    public String getAbsolutePath() {
         return file.getAbsolutePath();
     }
 
@@ -37,6 +37,6 @@ public class LocalFile {
 
     @Override
     public String toString() {
-        return getPath();
+        return getAbsolutePath();
     }
 }
