@@ -37,7 +37,7 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
         FileSystem fs = FileSystem.get(new Configuration());
         LocalFile tif = new LocalFile(tempdir + "/" + filepath.toString().replaceAll(".+\\/", ""), filepath.toString(), fs);
         LocalFile jp2 = new LocalFile(tif.getPath() + ".jp2");
-        LocalFile tga = new LocalFile(tif.getPath() + ".tga");
+        LocalFile outtif = new LocalFile(tif.getPath() + ".tif");
         StringBuffer report = new StringBuffer(sep);
         StringBuffer toolLogs = new StringBuffer(sep + sep + "TOOL LOGS FOR " + filepath + ":" + sep + "==================" + sep);
 
@@ -66,16 +66,16 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
                 report.append("FAILURE;");
             }
 
-            CliCommand opj_decompress = new CliCommand(jp2, tga);
-            opj_decompress.runCommand("opj_decompress", "-i", "#infile#", "-o", "#outfile#");
-            report.append(opj_decompress.getElapsedTime() + ";");
+            CliCommand kdu_expand = new CliCommand(jp2, outtif);
+            kdu_expand.runCommand("kdu_expand", "-i", "#infile#", "-o", "#outfile#");
+            report.append(kdu_expand.getElapsedTime() + ";");
             report.append("SUCCESS;");
 
-            toolLogs.append("opj_decompress OUT:" + sep + "---" + sep + opj_decompress.getStdOut() + sep + sep);
-            toolLogs.append("opj_decompress ERR:" + sep + "---" + sep + opj_decompress.getStdErr() + sep + sep);
+            toolLogs.append("kdu_expand OUT:" + sep + "---" + sep + kdu_expand.getStdOut() + sep + sep);
+            toolLogs.append("kdu_expand ERR:" + sep + "---" + sep + kdu_expand.getStdErr() + sep + sep);
 
 
-            CliCommand gm = new CliCommand(tga, tif);
+            CliCommand gm = new CliCommand(outtif, tif);
             gm.runCommand("gm", "compare", "-metric", "mse", "#infile#", "#outfile#");
             report.append(gm.getElapsedTime() + ";");
             if(gm.getStdOut().contains("Total: 0.0000000000")) {
@@ -92,7 +92,7 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
 
             tif.delete();
             jp2.delete();
-            tga.delete();
+            outtif.delete();
         }
 
         output.collect(new Text("TOOLLOG"), new Text(toolLogs.toString()));
