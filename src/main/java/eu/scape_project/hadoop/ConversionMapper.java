@@ -12,6 +12,10 @@ import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 
 
@@ -33,9 +37,14 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
 
 
         FileSystem fs = FileSystem.get(new Configuration());
+        String probatronJAR = ConversionRunner.class.getResource("/external-tools/probatron.jar").getFile();
+        String probatronSchema = ConversionRunner.class.getResource("/kbMaster.sch").getFile();
+
         LocalFile tif = new LocalFile(tempdir + "/" + filepath.toString().replaceAll(".+\\/", ""), filepath.toString(), fs);
         LocalFile jp2 = new LocalFile(tif.getAbsolutePath() + ".jp2");
         LocalFile outtif = new LocalFile(tif.getAbsolutePath() + "out.tif");
+        LocalFile profile = new LocalFile(tif.getAbsolutePath() + ".profile.xml");
+
         StringBuffer report = new StringBuffer(sep);
         StringBuffer toolLogs = new StringBuffer(sep + sep + "TOOL LOGS FOR " + filepath + ":" + sep + "==================" + sep);
 
@@ -58,11 +67,29 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
             toolLogs.append("jpylyzer OUT:" + sep + "---" + sep + jpylyzer.getStdOut() + sep + sep);
             toolLogs.append("jpylyzer ERR:" + sep + "---" + sep + jpylyzer.getStdErr() + sep + sep);
 
+            FileWriter w = new FileWriter(new File(profile.getAbsolutePath()));
+            w.write(jpylyzer.getStdOut());
+            w.close();
+
             if(jpylyzer.getStdOut().contains("<isValidJP2>True</isValidJP2>")) {
                 report.append("SUCCESS;");
             }  else {
                 report.append("FAILURE;");
             }
+
+            CliCommand probatron = new CliCommand(profile);
+            probatron.runCommand("java", "-jar", probatronJAR, "#infile#", probatronSchema);
+            report.append(probatron.getElapsedTime() + ";");
+
+            if(probatron.getStdOut().contains("failed-assert")) {
+                report.append("FAILURE;");
+            } else {
+                report.append("SUCCESS;");
+            }
+
+            toolLogs.append("probatron OUT:" + sep + "---" + sep + probatron.getStdOut() + sep + sep);
+            toolLogs.append("probatron ERR:" + sep + "---" + sep + probatron.getStdErr() + sep + sep);
+
 
             CliCommand kdu_expand = new CliCommand(jp2, outtif);
             kdu_expand.runCommand("kdu_expand", "-i", "#infile#", "-o", "#outfile#");

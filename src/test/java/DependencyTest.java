@@ -19,7 +19,7 @@ public class DependencyTest {
     }
 
     @Test
-    public void testForOpjCompress() throws  IOException {
+    public void testForOpjCompress() throws IOException {
         String tif = ConversionRunner.class.getResource("/test.tif").getFile();
         LocalFile tmpjp2 = new LocalFile("tmp.jp2");
         new CliCommand(new LocalFile(tif), tmpjp2)
@@ -29,11 +29,20 @@ public class DependencyTest {
     }
 
     @Test
-    public void testForJpylyzer() throws  IOException {
+    public void testForJpylyzer() throws IOException {
         String jp2 = ConversionRunner.class.getResource("/test.jp2").getFile();
         CliCommand cmd = new CliCommand(new LocalFile(jp2));
         cmd.runCommand("jpylyzer", "#infile#");
         assert(cmd.getStdOut().contains("<isValidJP2>True</isValidJP2>"));
     }
 
+    @Test
+    public void testForProbatron() throws IOException {
+        String probatron = ConversionRunner.class.getResource("/external-tools/probatron.jar").getFile();
+        String schema = ConversionRunner.class.getResource("/kbMaster.sch").getFile();
+        String doc = ConversionRunner.class.getResource("/pyly.xml").getFile();
+        CliCommand cmd = new CliCommand(new LocalFile(doc));
+        cmd.runCommand("java", "-jar", probatron, "#infile#", schema);
+        assert(cmd.getStdOut().contains("failed-assert"));
+    }
 }
