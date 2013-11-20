@@ -116,7 +116,8 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
             try {
                 probatron.runCommand("java", "-Xmx8388608m", "-jar", probatronJAR.getAbsolutePath(), "#infile#", probatronSchema.getAbsolutePath());
             } catch (IOException e) {
-                throw new IOException(probatron.getStdErr());
+                toolLogs.append("probatron ERR:" + sep + "---" + sep + probatron.getStdErr() + sep + sep);
+                throw new IOException();
             }
             report.append(probatron.getElapsedTime() + ";");
 
@@ -127,7 +128,6 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
             }
 
             toolLogs.append("probatron OUT:" + sep + "---" + sep + probatron.getStdOut() + sep + sep);
-            toolLogs.append("probatron ERR:" + sep + "---" + sep + probatron.getStdErr() + sep + sep);
 
             currentStage = "kdu_expand";
             CliCommand kdu_expand = new CliCommand(jp2, outtif);
