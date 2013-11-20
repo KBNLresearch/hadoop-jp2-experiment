@@ -27,6 +27,7 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
     private String tempdir;
     private String outdir;
     private LocalFile probatronJAR;
+    private LocalFile probatronSchema;
 
     @Override
     public void configure(JobConf job) {
@@ -41,6 +42,17 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
             while(ln != -1) { out.write(buf, 0, ln); ln = in.read(buf); }
             in.close();
             out.close();
+
+            probatronSchema = new LocalFile(tempdir + "kbMaster.sch");
+            in = ConversionRunner.class.getResourceAsStream("/kbMaster.sch");
+            out = new FileOutputStream(new File(probatronSchema.getAbsolutePath()));
+            buf = new byte[1024];
+            ln = in.read(buf);
+            while(ln != -1) { out.write(buf, 0, ln); ln = in.read(buf); }
+            in.close();
+            out.close();
+
+
         } catch(IOException e) {
             throw new ExceptionInInitializerError(e);
         }
@@ -53,7 +65,7 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
 
 
         FileSystem fs = FileSystem.get(new Configuration());
-        String probatronSchema = ConversionRunner.class.getResource("/kbMaster.sch").getFile();
+
 
         LocalFile tif = new LocalFile(tempdir + "/" + filepath.toString().replaceAll(".+\\/", ""), filepath.toString(), fs);
         LocalFile jp2 = new LocalFile(tif.getAbsolutePath() + ".jp2");
@@ -97,7 +109,7 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
 
             currentStage = "probatron";
             CliCommand probatron = new CliCommand(profile);
-            probatron.runCommand("java", "-jar", probatronJAR.getAbsolutePath(), "#infile#", probatronSchema);
+            probatron.runCommand("java", "-jar", probatronJAR.getAbsolutePath(), "#infile#", probatronSchema.getAbsolutePath());
             report.append(probatron.getElapsedTime() + ";");
 
             if(probatron.getStdOut().contains("failed-assert")) {
