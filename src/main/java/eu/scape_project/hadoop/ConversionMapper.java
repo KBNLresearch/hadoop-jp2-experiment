@@ -35,24 +35,26 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
         outdir = job.get("outdir");
         try {
             probatronJAR = new LocalFile(tempdir + "/probatron.jar");
-            if(new File(probatronJAR.getAbsolutePath()).exists()) { return; }
-            InputStream in = ConversionRunner.class.getResourceAsStream("/external-tools/probatron.jar");
-            OutputStream out = new FileOutputStream(new File(probatronJAR.getAbsolutePath()));
-            byte[] buf = new byte[1024];
-            int ln = in.read(buf);
-            while(ln != -1) { out.write(buf, 0, ln); ln = in.read(buf); }
-            in.close();
-            out.close();
+            if(!new File(probatronJAR.getAbsolutePath()).exists()) {
+                InputStream in = ConversionRunner.class.getResourceAsStream("/external-tools/probatron.jar");
+                OutputStream out = new FileOutputStream(new File(probatronJAR.getAbsolutePath()));
+                byte[] buf = new byte[1024];
+                int ln = in.read(buf);
+                while(ln != -1) { out.write(buf, 0, ln); ln = in.read(buf); }
+                in.close();
+                out.close();
+            }
 
             probatronSchema = new LocalFile(tempdir + "/kbMaster.sch");
-            if(new File(probatronSchema.getAbsolutePath()).exists()) { return; }
-            in = ConversionRunner.class.getResourceAsStream("/kbMaster.sch");
-            out = new FileOutputStream(new File(probatronSchema.getAbsolutePath()));
-            buf = new byte[1024];
-            ln = in.read(buf);
-            while(ln != -1) { out.write(buf, 0, ln); ln = in.read(buf); }
-            in.close();
-            out.close();
+            if(!new File(probatronSchema.getAbsolutePath()).exists()) {
+                InputStream in = ConversionRunner.class.getResourceAsStream("/kbMaster.sch");
+                OutputStream out = new FileOutputStream(new File(probatronSchema.getAbsolutePath()));
+                byte[] buf = new byte[1024];
+                int ln = in.read(buf);
+                while(ln != -1) { out.write(buf, 0, ln); ln = in.read(buf); }
+                in.close();
+                out.close();
+            }
 
 
         } catch(IOException e) {
