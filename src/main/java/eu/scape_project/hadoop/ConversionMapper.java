@@ -67,9 +67,9 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
             toolLogs.append("jpylyzer OUT:" + sep + "---" + sep + jpylyzer.getStdOut() + sep + sep);
             toolLogs.append("jpylyzer ERR:" + sep + "---" + sep + jpylyzer.getStdErr() + sep + sep);
 
-/*            FileWriter w = new FileWriter(new File(profile.getAbsolutePath()));
+            FileWriter w = new FileWriter(new File(profile.getAbsolutePath()));
             w.write(jpylyzer.getStdOut());
-            w.close();           */
+            w.close();
 
             if(jpylyzer.getStdOut().contains("<isValidJP2>True</isValidJP2>")) {
                 report.append("SUCCESS;");
