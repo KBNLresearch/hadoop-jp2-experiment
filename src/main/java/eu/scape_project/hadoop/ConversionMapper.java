@@ -113,7 +113,7 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
 
             currentStage = "probatron";
             CliCommand probatron = new CliCommand(profile);
-            probatron.runCommand("java", "-jar", probatronJAR.getAbsolutePath(), "#infile#", probatronSchema.getAbsolutePath());
+            probatron.runCommand("java", "-Xmx8388608m", "-jar", probatronJAR.getAbsolutePath(), "#infile#", probatronSchema.getAbsolutePath());
             report.append(probatron.getElapsedTime() + ";");
 
             if(probatron.getStdOut().contains("failed-assert")) {
