@@ -103,9 +103,9 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
 
             currentStage = "probatron";
             org.probatron.Session ses = new org.probatron.Session();
-            ses.setSchemaDoc(probatronSchema.getAbsolutePath());
+            ses.setSchemaDoc("file:" + probatronSchema.getAbsolutePath());
 
-            ValidationReport probatronVR = ses.doValidation(profile.getAbsolutePath());
+            ValidationReport probatronVR = ses.doValidation("file:" + profile.getAbsolutePath());
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             probatronVR.streamOut(baos);
             String probatronReport = baos.toString();
