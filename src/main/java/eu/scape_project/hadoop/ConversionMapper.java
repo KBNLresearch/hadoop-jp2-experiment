@@ -15,19 +15,35 @@ import org.apache.hadoop.mapred.Reporter;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 
 public class ConversionMapper extends MapReduceBase implements Mapper<LongWritable, Text, Text, Text> {
     private static final String sep = System.getProperty("line.separator");
     private String tempdir;
     private String outdir;
+    private LocalFile probatronJAR;
 
     @Override
     public void configure(JobConf job) {
         tempdir = job.get("tmpdir");
         outdir = job.get("outdir");
+        try {
+            probatronJAR = new LocalFile(tempdir + "/probatron.jar");
+            InputStream in = ConversionRunner.class.getResourceAsStream("/external-tools/probatron.jar");
+            OutputStream out = new FileOutputStream(new File(probatronJAR.getAbsolutePath()));
+            byte[] buf = new byte[1024];
+            int ln = in.read(buf);
+            while(ln != -1) { out.write(buf, 0, ln); ln = in.read(buf); }
+            in.close();
+            out.close();
+        } catch(IOException e) {
+            throw new ExceptionInInitializerError(e);
+        }
     }
 
 
@@ -37,7 +53,6 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
 
 
         FileSystem fs = FileSystem.get(new Configuration());
-        String probatronJAR = ConversionRunner.class.getResource("/external-tools/probatron.jar").getFile();
         String probatronSchema = ConversionRunner.class.getResource("/kbMaster.sch").getFile();
 
         LocalFile tif = new LocalFile(tempdir + "/" + filepath.toString().replaceAll(".+\\/", ""), filepath.toString(), fs);
@@ -47,6 +62,7 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
 
         StringBuffer report = new StringBuffer(sep);
         StringBuffer toolLogs = new StringBuffer(sep + sep + "TOOL LOGS FOR " + filepath + ":" + sep + "==================" + sep);
+        String currentStage = "opj_compress";
 
         try {
 
@@ -60,12 +76,14 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
 
             fs.copyFromLocalFile(new Path(jp2.getAbsolutePath()), new Path(outdir + "/" + jp2.getName()));
 
+            currentStage = "jpylyzer";
             CliCommand jpylyzer = new CliCommand(jp2);
             jpylyzer.runCommand("jpylyzer", "#infile#");
             report.append(jpylyzer.getElapsedTime() + ";");
 
             toolLogs.append("jpylyzer OUT:" + sep + "---" + sep + jpylyzer.getStdOut() + sep + sep);
             toolLogs.append("jpylyzer ERR:" + sep + "---" + sep + jpylyzer.getStdErr() + sep + sep);
+
 
             FileWriter w = new FileWriter(new File(profile.getAbsolutePath()));
             w.write(jpylyzer.getStdOut());
@@ -77,12 +95,9 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
                 report.append("FAILURE;");
             }
 
+            currentStage = "probatron";
             CliCommand probatron = new CliCommand(profile);
-            try {
-                probatron.runCommand("java", "-jar", probatronJAR, "#infile#", probatronSchema);
-            } catch (IOException e) {
-
-            }
+            probatron.runCommand("java", "-jar", probatronJAR.getAbsolutePath(), "#infile#", probatronSchema);
             report.append(probatron.getElapsedTime() + ";");
 
             if(probatron.getStdOut().contains("failed-assert")) {
@@ -94,7 +109,7 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
             toolLogs.append("probatron OUT:" + sep + "---" + sep + probatron.getStdOut() + sep + sep);
             toolLogs.append("probatron ERR:" + sep + "---" + sep + probatron.getStdErr() + sep + sep);
 
-
+            currentStage = "kdu_expand";
             CliCommand kdu_expand = new CliCommand(jp2, outtif);
             kdu_expand.runCommand("kdu_expand", "-i", "#infile#", "-o", "#outfile#");
             report.append(kdu_expand.getElapsedTime() + ";");
@@ -104,6 +119,7 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
             toolLogs.append("kdu_expand ERR:" + sep + "---" + sep + kdu_expand.getStdErr() + sep + sep);
 
 
+            currentStage = "gm";
             CliCommand gm = new CliCommand(outtif, tif);
             gm.runCommand("gm", "compare", "-metric", "mse", "#infile#", "#outfile#");
             report.append(gm.getElapsedTime() + ";");
@@ -116,7 +132,7 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
             toolLogs.append("gm compare ERR:" + sep + "---" + sep + gm.getStdErr() + sep + sep);
 
         } catch(IOException e) {
-            report.append("IOEXCEPTION: " + e.getMessage());
+            report.append("IOEXCEPTION in stage (" + currentStage + "): " + e.getMessage());
         } finally {
 
             tif.delete();
