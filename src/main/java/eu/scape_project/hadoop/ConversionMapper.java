@@ -148,6 +148,7 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
             tif.delete();
             jp2.delete();
             outtif.delete();
+            profile.delete();
         }
 
         output.collect(new Text("TOOLLOG"), new Text(toolLogs.toString()));
