@@ -2,9 +2,14 @@ import eu.scape_project.hadoop.ConversionRunner;
 import eu.scape_project.hadoop.util.CliCommand;
 import eu.scape_project.hadoop.util.LocalFile;
 import org.junit.Test;
+import org.probatron.Driver;
+import org.probatron.ValidationReport;
 
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.StringWriter;
 
 public class DependencyTest {
 
@@ -38,11 +43,15 @@ public class DependencyTest {
 
     @Test
     public void testForProbatron() throws IOException {
-        String probatron = ConversionRunner.class.getResource("/external-tools/probatron.jar").getFile();
-        String schema = ConversionRunner.class.getResource("/kbMaster.sch").getFile();
-        String doc = ConversionRunner.class.getResource("/pyly.xml").getFile();
-        CliCommand cmd = new CliCommand(new LocalFile(doc));
-        cmd.runCommand("java", "-jar", probatron, "#infile#", schema);
-        assert(cmd.getStdOut().contains("failed-assert"));
+
+        String schema = "file:" + ConversionRunner.class.getResource("/kbMaster.sch").getFile();
+        String doc = "file:" + ConversionRunner.class.getResource("/pyly.xml").getFile();
+        org.probatron.Session ses = new org.probatron.Session();
+        ses.setSchemaDoc(schema);
+        ValidationReport report = ses.doValidation(doc);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        report.streamOut(baos);
+        assert(baos.toString().contains("failed-assert"));
+
     }
 }

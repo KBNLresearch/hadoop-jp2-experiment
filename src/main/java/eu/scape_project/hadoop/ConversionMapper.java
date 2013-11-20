@@ -12,8 +12,10 @@ import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
+import org.probatron.ValidationReport;
 
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -26,7 +28,6 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
     private static final String sep = System.getProperty("line.separator");
     private String tempdir;
     private String outdir;
-    private LocalFile probatronJAR;
     private LocalFile probatronSchema;
 
     @Override
@@ -34,17 +35,6 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
         tempdir = job.get("tmpdir");
         outdir = job.get("outdir");
         try {
-            probatronJAR = new LocalFile(tempdir + "/probatron.jar");
-            if(!new File(probatronJAR.getAbsolutePath()).exists()) {
-                InputStream in = ConversionRunner.class.getResourceAsStream("/external-tools/probatron.jar");
-                OutputStream out = new FileOutputStream(new File(probatronJAR.getAbsolutePath()));
-                byte[] buf = new byte[1024];
-                int ln = in.read(buf);
-                while(ln != -1) { out.write(buf, 0, ln); ln = in.read(buf); }
-                in.close();
-                out.close();
-            }
-
             probatronSchema = new LocalFile(tempdir + "/kbMaster.sch");
             if(!new File(probatronSchema.getAbsolutePath()).exists()) {
                 InputStream in = ConversionRunner.class.getResourceAsStream("/kbMaster.sch");
@@ -112,22 +102,22 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
             }
 
             currentStage = "probatron";
-            CliCommand probatron = new CliCommand(profile);
-            try {
-                probatron.runCommand("java", "-Xmx8388608m", "-jar", probatronJAR.getAbsolutePath(), "#infile#", probatronSchema.getAbsolutePath());
-            } catch (IOException e) {
-                toolLogs.append("probatron ERR:" + sep + "---" + sep + probatron.getStdErr() + sep + sep);
-                throw new IOException();
-            }
-            report.append(probatron.getElapsedTime() + ";");
+            org.probatron.Session ses = new org.probatron.Session();
+            ses.setSchemaDoc(probatronSchema.getAbsolutePath());
 
-            if(probatron.getStdOut().contains("failed-assert")) {
+            ValidationReport probatronVR = ses.doValidation(profile.getAbsolutePath());
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            probatronVR.streamOut(baos);
+            String probatronReport = baos.toString();
+
+
+            if(probatronReport.contains("failed-assert")) {
                 report.append("FAILURE;");
             } else {
                 report.append("SUCCESS;");
             }
 
-            toolLogs.append("probatron OUT:" + sep + "---" + sep + probatron.getStdOut() + sep + sep);
+            toolLogs.append("probatron OUT:" + sep + "---" + sep + probatronReport + sep + sep);
 
             currentStage = "kdu_expand";
             CliCommand kdu_expand = new CliCommand(jp2, outtif);
