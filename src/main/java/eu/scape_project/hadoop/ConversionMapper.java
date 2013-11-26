@@ -29,23 +29,30 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
     private String tempdir;
     private String outdir;
     private LocalFile probatronSchema;
+    private LocalFile awareOpts;
+
+	private LocalFile makeTempFile(String resourcePath) throws IOException {
+        LocalFile localFile = new LocalFile(tempdir + resourcePath);
+        if(!new File(localFile.getAbsolutePath()).exists()) {
+
+            InputStream in = ConversionRunner.class.getResourceAsStream(resourcePath);
+            OutputStream out = new FileOutputStream(new File(localFile.getAbsolutePath()));
+            byte[] buf = new byte[1024];
+            int ln = in.read(buf);
+            while(ln != -1) { out.write(buf, 0, ln); ln = in.read(buf); }
+            in.close();
+            out.close();
+        }
+		return localFile;
+	}
 
     @Override
     public void configure(JobConf job) {
         tempdir = job.get("tmpdir");
         outdir = job.get("outdir");
         try {
-            probatronSchema = new LocalFile(tempdir + "/kbMaster.sch");
-            if(!new File(probatronSchema.getAbsolutePath()).exists()) {
-                InputStream in = ConversionRunner.class.getResourceAsStream("/kbMaster.sch");
-                OutputStream out = new FileOutputStream(new File(probatronSchema.getAbsolutePath()));
-                byte[] buf = new byte[1024];
-                int ln = in.read(buf);
-                while(ln != -1) { out.write(buf, 0, ln); ln = in.read(buf); }
-                in.close();
-                out.close();
-            }
-
+			probatronSchema = makeTempFile("/kbMaster.sch");
+			awareOpts = makeTempFile("/optionsKBMasterLossless.xml");
 
         } catch(IOException e) {
             throw new ExceptionInInitializerError(e);
@@ -68,17 +75,23 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
 
         StringBuffer report = new StringBuffer(sep);
         StringBuffer toolLogs = new StringBuffer(sep + sep + "TOOL LOGS FOR " + filepath + ":" + sep + "==================" + sep);
-        String currentStage = "opj_compress";
+        String currentStage = "aware_compress";
 
         try {
 
-            CliCommand opj_compress = new CliCommand(tif, jp2);
+/*            CliCommand opj_compress = new CliCommand(tif, jp2);
             opj_compress.runCommand("opj_compress", "-n", "6", "-t", "512,512", "-i", "#infile#", "-o", "#outfile#");
             report.append(opj_compress.getElapsedTime() + ";");
             report.append("SUCCESS;");
 
             toolLogs.append("opj_compress OUT:" + sep + "---" + sep + opj_compress.getStdOut() + sep + sep);
-            toolLogs.append("opj_compress ERR:" + sep + "---" + sep + opj_compress.getStdErr() + sep + sep);
+            toolLogs.append("opj_compress ERR:" + sep + "---" + sep + opj_compress.getStdErr() + sep + sep);*/
+			CliCommand aware_compress = new CliCommand(tif, jp2);
+			aware_compress.runCommand("jpwrappa.py",  "#infile#", "#outfile#", "-p", awareOpts.getAbsolutePath());
+            report.append("SUCCESS;");
+            toolLogs.append("jpwrappa.py OUT:" + sep + "---" + sep + aware_compress.getStdOut() + sep + sep);
+            toolLogs.append("jpwrappa.py ERR:" + sep + "---" + sep + aware_compress.getStdErr() + sep + sep);
+
 
             fs.copyFromLocalFile(new Path(jp2.getAbsolutePath()), new Path(outdir + "/" + jp2.getName()));
 

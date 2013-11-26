@@ -21,10 +21,11 @@ TO DO:
         <s:rule context="/jpylyzer">
             <s:assert test="isValidJP2 = 'True'">no valid JP2</s:assert>
         </s:rule>
-        <!-- check that xml box exists -->
+        <!-- check that xml box exists 
         <s:rule context="/jpylyzer/properties">
             <s:assert test="xmlBox">no XML box</s:assert>
         </s:rule>
+		-->
         <!-- check that resolution box exists -->
         <s:rule context="/jpylyzer/properties/jp2HeaderBox">
             <s:assert test="resolutionBox">no resolution box</s:assert>
