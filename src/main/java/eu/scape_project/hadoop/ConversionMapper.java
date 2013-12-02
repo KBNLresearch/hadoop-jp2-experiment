@@ -31,7 +31,13 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
     private LocalFile probatronSchema;
     private LocalFile awareOpts;
 
-	private LocalFile makeTempFile(String resourcePath) throws IOException {
+    /**
+     * Copy a resource file to the local fs
+     * @param resourcePath
+     * @return LocalFile instance containing refs to the local file
+     * @throws IOException
+     */
+    private LocalFile makeTempFile(String resourcePath) throws IOException {
         LocalFile localFile = new LocalFile(tempdir + resourcePath);
         if(!new File(localFile.getAbsolutePath()).exists()) {
 
@@ -60,6 +66,14 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
     }
 
 
+    /**
+     * Implements the actual conversion workflow
+     * @param ignored
+     * @param filepath hdfs file location (from a keyfile (txt))
+     * @param output
+     * @param reporter
+     * @throws IOException
+     */
     @Override
     public void map(LongWritable ignored, Text filepath,
                     OutputCollector<Text, Text> output, Reporter reporter) throws IOException {
@@ -67,35 +81,35 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
 
         FileSystem fs = FileSystem.get(new Configuration());
 
-
+        // TIFF in
         LocalFile tif = new LocalFile(tempdir + "/" + filepath.toString().replaceAll(".+\\/", ""), filepath.toString(), fs);
+        // JP2 out
         LocalFile jp2 = new LocalFile(tif.getAbsolutePath() + ".jp2");
+        // Used for pixel check (jp2 converted back to tif using kdu_expand)
         LocalFile outtif = new LocalFile(tif.getAbsolutePath() + "out.tif");
+        // KB Master probaton profile for valid .jp2 files
         LocalFile profile = new LocalFile(tif.getAbsolutePath() + ".profile.xml");
 
+        // log report entries
         StringBuffer report = new StringBuffer(sep);
         StringBuffer toolLogs = new StringBuffer(sep + sep + "TOOL LOGS FOR " + filepath + ":" + sep + "==================" + sep);
         String currentStage = "aware_compress";
 
         try {
-
-/*            CliCommand opj_compress = new CliCommand(tif, jp2);
-            opj_compress.runCommand("opj_compress", "-n", "6", "-t", "512,512", "-i", "#infile#", "-o", "#outfile#");
-            report.append(opj_compress.getElapsedTime() + ";");
-            report.append("SUCCESS;");
-
-            toolLogs.append("opj_compress OUT:" + sep + "---" + sep + opj_compress.getStdOut() + sep + sep);
-            toolLogs.append("opj_compress ERR:" + sep + "---" + sep + opj_compress.getStdErr() + sep + sep);*/
+            // Compress tiff to .jp2 using aware driver (wrapped by jkn)
 			CliCommand aware_compress = new CliCommand(tif, jp2);
 			aware_compress.runCommand("jpwrappa.py",  "#infile#", "#outfile#", "-p", awareOpts.getAbsolutePath());
+            report.append(aware_compress.getElapsedTime() + ";");
             report.append("SUCCESS;");
             toolLogs.append("jpwrappa.py OUT:" + sep + "---" + sep + aware_compress.getStdOut() + sep + sep);
             toolLogs.append("jpwrappa.py ERR:" + sep + "---" + sep + aware_compress.getStdErr() + sep + sep);
 
-
+            // copy the output .jp2 to hdfs
             fs.copyFromLocalFile(new Path(jp2.getAbsolutePath()), new Path(outdir + "/" + jp2.getName()));
 
             currentStage = "jpylyzer";
+
+            // Validate the .jp2 file with jpylyzer
             CliCommand jpylyzer = new CliCommand(jp2);
             jpylyzer.runCommand("jpylyzer", "#infile#");
             report.append(jpylyzer.getElapsedTime() + ";");
@@ -114,6 +128,7 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
                 report.append("FAILURE;");
             }
 
+            // Validate the jpylyzer profile against the KB master schema using probatron
             currentStage = "probatron";
             org.probatron.Session ses = new org.probatron.Session();
             ses.setSchemaDoc("file:" + probatronSchema.getAbsolutePath());
@@ -132,6 +147,7 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
 
             toolLogs.append("probatron OUT:" + sep + "---" + sep + probatronReport + sep + sep);
 
+            // Expand the .jp2 back to TIFF for pixel check using kakadu
             currentStage = "kdu_expand";
             CliCommand kdu_expand = new CliCommand(jp2, outtif);
             kdu_expand.runCommand("kdu_expand", "-i", "#infile#", "-o", "#outfile#");
@@ -141,7 +157,7 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
             toolLogs.append("kdu_expand OUT:" + sep + "---" + sep + kdu_expand.getStdOut() + sep + sep);
             toolLogs.append("kdu_expand ERR:" + sep + "---" + sep + kdu_expand.getStdErr() + sep + sep);
 
-
+            // Compare the pixels of the .jp2 with the new TIFF
             currentStage = "gm";
             CliCommand gm = new CliCommand(outtif, tif);
             gm.runCommand("gm", "compare", "-metric", "mse", "#infile#", "#outfile#");
