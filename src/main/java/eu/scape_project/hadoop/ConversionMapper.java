@@ -140,7 +140,7 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
             String probatronReport = baos.toString();
             long probatronElapsed = System.nanoTime() - probatronStart;
 
-            report.append((probatronElapsed / 1000) + ";");
+            report.append((probatronElapsed / (1000 * 1000)) + ";");
 
             if(probatronReport.contains("failed-assert")) {
                 report.append("FAILURE;");
