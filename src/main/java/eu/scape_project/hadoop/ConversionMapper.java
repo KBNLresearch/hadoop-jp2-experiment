@@ -130,6 +130,7 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
 
             // Validate the jpylyzer profile against the KB master schema using probatron
             currentStage = "probatron";
+            long probatronStart = System.nanoTime();
             org.probatron.Session ses = new org.probatron.Session();
             ses.setSchemaDoc("file:" + probatronSchema.getAbsolutePath());
 
@@ -137,7 +138,9 @@ public class ConversionMapper extends MapReduceBase implements Mapper<LongWritab
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             probatronVR.streamOut(baos);
             String probatronReport = baos.toString();
+            long probatronElapsed = System.nanoTime() - probatronStart;
 
+            report.append((probatronElapsed / 1000) + ";");
 
             if(probatronReport.contains("failed-assert")) {
                 report.append("FAILURE;");
